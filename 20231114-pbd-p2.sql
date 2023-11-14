@@ -47,3 +47,13 @@ FOR EACH ROW
 EXECUTE FUNCTION fn_antes_de_insert_update();
 
 --INSERT INTO tb_youtubers VALUES (529,'Lucas Neto', -100000, 10000, 10000, 'fun', 2005);
+
+
+-- 3. Criando a coluna "Ativo" a partir de ALTER TABLE:
+ALTER TABLE tb_youtubers
+ADD COLUMN ativo INT DEFAULT 1 CHECK (ativo IN (0, 1));
+
+SELECT * FROM tb_youtubers;
+
+
+
