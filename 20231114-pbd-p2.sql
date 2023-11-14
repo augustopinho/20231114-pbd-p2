@@ -53,16 +53,17 @@ EXECUTE FUNCTION fn_antes_de_insert_update();
 ALTER TABLE tb_youtubers
 ADD COLUMN ativo INT DEFAULT 1 CHECK (ativo IN (0, 1));
 
---SELECT * FROM tb_youtubers;
+SELECT * FROM tb_youtubers;
 
 
 -- 4. Criação da tabela de log:
-CREATE TABLE tb_log_youtubers (
+CREATE TABLE OR REPLACE tb_log_youtubers (
   id_log SERIAL PRIMARY KEY,
   nome_youtuber VARCHAR(60),
   categoria_canal VARCHAR(40),
   ano_inicio INT,
   data_registro TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+	
 );
  
 -- Trigger para registrar log antes de inserção ou atualização na tabela principal
@@ -86,3 +87,33 @@ EXECUTE FUNCTION fn_log_antes_de_inserir_atualizar();
 --select * from tb_log_youtubers;
 
 --INSERT INTO tb_youtubers VALUES (530,'Lucas Neto', 100000, 10000, 10000, 'fun', 2005);
+
+
+-- 5. Trigger (feat(tg): dados valiosos):
+CREATE OR REPLACE FUNCTION fn_antes_do_delete()
+RETURNS TRIGGER AS $$
+BEGIN
+	RAISE NOTICE '%', OLD;
+    -- Insere os dados na tabela de logs antes da exclusão
+    UPDATE tb_youtubers SET ativo=0 WHERE rank=OLD.rank;
+	INSERT INTO tb_log_youtubers (nome_youtuber, categoria_canal, ano_inicio)
+    VALUES (OLD.youtuber, OLD.category, OLD.year_started);
+    -- Impede a exclusão dos dados
+    --RAISE EXCEPTION 'Não é permitido excluir dados da tabela tb_youtubers.';
+    -- Retorna OLD para indicar que a operação de exclusão foi interrompida
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger associado à tabela tb_youtubers
+CREATE OR REPLACE TRIGGER tg_antes_do_delete
+AFTER DELETE ON tb_youtubers
+FOR EACH ROW
+EXECUTE FUNCTION fn_antes_do_delete();
+ 
+UPDATE tb_youtubers SET ativo=0 WHERE rank=2; 
+SELECT * FROM tb_youtubers ORDER BY rank ASC;
+  
+DELETE FROM tb_youtubers WHERE rank =3;
+
+SELECT * FROM tb_log_youtubers;
